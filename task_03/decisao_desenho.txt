@@ -1,0 +1,21 @@
+1. Decisões de desenho
+
+Porquê três fact tables separadas e não uma só?
+
+Cada uma tem uma granularidade e assuntos diferentes:
+FACT_ECONOMY - uma linha por país+ano, mede indicadores macroeconómicos (PIB)
+FACT_SOCIETY - uma linha por país+ano, mede a população (GNI per capita, esperança de vida, urbanização)
+FACT_SECTOR - uma linha por país+ano+setor, mede a estrutura económica por setor
+
+Juntar tudo numa só tabela resultaria em muitas colunas vazias (ex: FACT_ECONOMY não tem noção de "setor",
+FACT_SECTOR precisa de uma dimensão extra que as outras duas não precisam) e iria contra a granularidade por processo que as FACT devem ser construidas
+
+Porque é que DIM_SECTOR só se liga à FACT_SECTOR?
+
+Porque só a tabela FACT_SECTOR tem a noção de "setor" (agricultura, indústria, manufatura, serviços).
+PIB per capita ou esperança de vida não têm "setor", por isso não faz sentido ligar DIM_SECTOR a FACT_ECONOMY ou FACT_SOCIETY,
+ficaria sempre a apontar para um valor tipo NULL, o que é desperdício de modelação.
+
+Integração dos eventos qual escolher?
+Opção escolhida: Bridge Table, pois liga-se às keys das dimensões (DIM_TIME, DIM_COUNTRY) sem joins extra por year
+Evita a complexidade desnecessária da criação da DIM_EVENT (que trataria eventos como uma dimensão de medida, enquanto que na verdade são só ligações, sem medida própria)

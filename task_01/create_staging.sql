@@ -39,3 +39,4 @@ CREATE TABLE staging_country_mapping (
     country_name    VARCHAR(20)    NOT NULL,
     country_group   VARCHAR(30)     NOT NULL
 );
+

@@ -81,7 +81,7 @@
         <currency>$</currency>
         <decimal>.</decimal>
         <group>,</group>
-        <length>7</length>
+        <length>9</length>
         <precision>-1</precision>
         <trim_type>none</trim_type>
       </field>
@@ -92,7 +92,7 @@
         <currency>$</currency>
         <decimal>.</decimal>
         <group>,</group>
-        <length>3</length>
+        <length>5</length>
         <precision>-1</precision>
         <trim_type>none</trim_type>
       </field>
@@ -103,7 +103,7 @@
         <currency>$</currency>
         <decimal>.</decimal>
         <group>,</group>
-        <length>26</length>
+        <length>37</length>
         <precision>-1</precision>
         <trim_type>none</trim_type>
       </field>
@@ -121,12 +121,12 @@
       <field>
         <name>value</name>
         <type>Number</type>
-        <format>#.#</format>
+        <format>#.#############</format>
         <currency>$</currency>
         <decimal>.</decimal>
         <group>,</group>
-        <length>15</length>
-        <precision>1</precision>
+        <length>18</length>
+        <precision>13</precision>
         <trim_type>none</trim_type>
       </field>
     </fields>
@@ -194,7 +194,7 @@
     <tablename_field/>
     <tablename_in_field>N</tablename_in_field>
     <tablename_in_table>Y</tablename_in_table>
-    <truncate>N</truncate>
+    <truncate>Y</truncate>
     <use_batch>Y</use_batch>
     <attributes/>
     <GUI>
@@ -247,7 +247,7 @@
         <currency>$</currency>
         <decimal>.</decimal>
         <group>,</group>
-        <length>7</length>
+        <length>14</length>
         <precision>-1</precision>
         <trim_type>none</trim_type>
       </field>
@@ -258,7 +258,7 @@
         <currency>$</currency>
         <decimal>.</decimal>
         <group>,</group>
-        <length>14</length>
+        <length>17</length>
         <precision>-1</precision>
         <trim_type>none</trim_type>
       </field>
@@ -269,7 +269,7 @@
         <currency>$</currency>
         <decimal>.</decimal>
         <group>,</group>
-        <length>40</length>
+        <length>72</length>
         <precision>-1</precision>
         <trim_type>none</trim_type>
       </field>
@@ -287,12 +287,12 @@
       <field>
         <name>value</name>
         <type>Number</type>
-        <format>#.#</format>
+        <format>#.#################</format>
         <currency>$</currency>
         <decimal>.</decimal>
         <group>,</group>
-        <length>15</length>
-        <precision>1</precision>
+        <length>20</length>
+        <precision>17</precision>
         <trim_type>none</trim_type>
       </field>
     </fields>
@@ -360,7 +360,7 @@
     <tablename_field/>
     <tablename_in_field>N</tablename_in_field>
     <tablename_in_table>Y</tablename_in_table>
-    <truncate>N</truncate>
+    <truncate>Y</truncate>
     <use_batch>Y</use_batch>
     <attributes/>
     <GUI>
@@ -424,7 +424,7 @@
         <currency>$</currency>
         <decimal>.</decimal>
         <group>,</group>
-        <length>8</length>
+        <length>14</length>
         <precision>-1</precision>
         <trim_type>none</trim_type>
       </field>
@@ -446,7 +446,7 @@
         <currency>$</currency>
         <decimal>.</decimal>
         <group>,</group>
-        <length>20</length>
+        <length>47</length>
         <precision>-1</precision>
         <trim_type>none</trim_type>
       </field>
@@ -526,7 +526,7 @@
     <tablename_field/>
     <tablename_in_field>N</tablename_in_field>
     <tablename_in_table>Y</tablename_in_table>
-    <truncate>N</truncate>
+    <truncate>Y</truncate>
     <use_batch>Y</use_batch>
     <attributes/>
     <GUI>

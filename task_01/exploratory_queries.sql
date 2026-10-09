@@ -19,7 +19,31 @@ SELECT 'wdi' as source, MIN(year) AS min_year, MAX(year) AS max_year FROM stagin
 union all
 SELECT 'hist_events' as source, MIN(year) AS min_year, MAX(year) AS max_year FROM staging_historical_events;
 
-SELECT indicator_code, indicator_name, MIN(year) AS min_year, MAX(year) AS max_year
+SELECT 'maddison' AS source, COUNT(*) AS row_count,
+       COUNT(DISTINCT country_iso3) AS num_entities,
+       MIN(year) AS min_year, MAX(year) AS max_year
+FROM staging_maddison
+UNION ALL
+SELECT 'wdi', COUNT(*), COUNT(DISTINCT country_iso3), MIN(year), MAX(year)
+FROM staging_wdi
+UNION ALL
+SELECT 'historical_events', COUNT(*), COUNT(DISTINCT country_iso3), MIN(year), MAX(year)
+FROM staging_historical_events;
+
+SELECT indicator_code, indicator_name,
+       MIN(year) AS min_year, MAX(year) AS max_year,
+       COUNT(*) AS row_count,
+       COUNT(DISTINCT country_iso3) AS num_countries,
+       COUNT(DISTINCT year) AS num_years_with_observations
+FROM staging_maddison
+GROUP BY indicator_code, indicator_name
+ORDER BY min_year;
+
+SELECT indicator_code, indicator_name,
+       MIN(year) AS min_year, MAX(year) AS max_year,
+       COUNT(*) AS row_count,
+       COUNT(DISTINCT country_iso3) AS num_countries,
+       COUNT(DISTINCT year) AS num_years_with_observations
 FROM staging_wdi
 GROUP BY indicator_code, indicator_name
 ORDER BY min_year;
@@ -36,8 +60,21 @@ FROM staging_maddison
 GROUP BY country_iso3, indicator_code, year
 HAVING COUNT(*) > 1;
 
+SELECT year, country_iso3, event, COUNT(*) AS n
+FROM staging_historical_events
+GROUP BY year, country_iso3, event
+HAVING COUNT(*) > 1;
+
 SELECT COUNT(*) AS null_values FROM staging_wdi WHERE value IS NULL;
 SELECT COUNT(*) AS null_values FROM staging_maddison WHERE value IS NULL;
+SELECT
+    COUNT(*) - COUNT(year) AS null_years,
+    COUNT(*) - COUNT(country_iso3) AS null_country_codes,
+    COUNT(*) - COUNT(country_name) AS null_country_names,
+    COUNT(*) - COUNT(event) AS null_events,
+    COUNT(*) - COUNT(category) AS null_categories,
+    COUNT(*) - COUNT(economic_impact) AS null_economic_impacts
+FROM staging_historical_events;
 
 -- ver se ha country_names diferentes para o mesm ocodigo
 SELECT 
@@ -57,20 +94,21 @@ WHERE m.country_name <> w.country_name;
 
 
 -- 4) support the temporal and geographic coverage analysis
-SELECT country_iso3, country_name, MIN(year) AS min_year, MAX(year) AS max_year
-FROM staging_wdi
-GROUP BY country_iso3, country_name
-ORDER BY country_name;
-
-SELECT country_iso3, country_name, MIN(year) AS min_year, MAX(year) AS max_year
-FROM staging_maddison sm 
-GROUP BY country_iso3, country_name
-ORDER BY country_name;
-
-SELECT country_iso3, country_name, MIN(year) AS min_year, MAX(year) AS max_year
-FROM staging_wdi
-GROUP BY country_iso3, country_name
-ORDER BY country_name;
+SELECT source, country_iso3, country_name,
+       MIN(year) AS min_year, MAX(year) AS max_year,
+       COUNT(*) AS row_count
+FROM (
+    SELECT 'maddison' AS source, country_iso3, country_name, year
+    FROM staging_maddison
+    UNION ALL
+    SELECT 'wdi' AS source, country_iso3, country_name, year
+    FROM staging_wdi
+    UNION ALL
+    SELECT 'historical_events' AS source, country_iso3, country_name, year
+    FROM staging_historical_events
+) AS source_rows
+GROUP BY source, country_iso3, country_name
+ORDER BY source, country_name;
 
 SELECT 'maddison' as source, country_iso3, country_name, MIN(year) AS min_year, MAX(year) AS max_year
 FROM staging_maddison sm 
@@ -86,7 +124,5 @@ SELECT 'historical' as source, country_iso3, country_name, MIN(year) AS min_year
 from staging_historical_events she
 where she.country_iso3 = 'PRT'
 GROUP BY country_iso3, country_name;
-
-
 
 

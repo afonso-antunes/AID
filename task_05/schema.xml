@@ -1,0 +1,82 @@
+<Schema name="PortugalDW">
+  <Dimension type="StandardDimension" visible="true" highCardinality="false" name="Country">
+    <Hierarchy name="Country Hierarchy" visible="true" hasAll="true" allMemberName="All Countries" primaryKey="country_key">
+      <Table name="DIM_COUNTRY">
+      </Table>
+      <Level name="Country Group" visible="true" column="country_group" type="String" uniqueMembers="false" levelType="Regular" hideMemberIf="Never">
+      </Level>
+      <Level name="Country" visible="true" column="country_name" type="String" uniqueMembers="false" levelType="Regular" hideMemberIf="Never">
+      </Level>
+    </Hierarchy>
+  </Dimension>
+  <Dimension type="TimeDimension" visible="true" highCardinality="false" name="Time">
+    <Hierarchy name="Time Hierarchy" visible="true" hasAll="true" allMemberName="All Times" primaryKey="time_key">
+      <Table name="DIM_TIME">
+      </Table>
+      <Level name="Decade" visible="true" column="decade" type="Integer" uniqueMembers="false" levelType="TimeYears" hideMemberIf="Never">
+      </Level>
+      <Level name="Year" visible="true" column="year" type="Integer" uniqueMembers="false" levelType="TimeYears" hideMemberIf="Never">
+      </Level>
+    </Hierarchy>
+  </Dimension>
+  <Dimension type="StandardDimension" visible="true" highCardinality="false" name="Sector">
+    <Hierarchy name="Sector Hierarchy" visible="true" hasAll="true" allMemberName="All Sectors" primaryKey="sector_key">
+      <Table name="DIM_SECTOR">
+      </Table>
+      <Level name="Broad Sector" visible="true" column="broad_sector" type="String" uniqueMembers="false" levelType="Regular" hideMemberIf="Never">
+      </Level>
+      <Level name="Sector" visible="true" column="sector_name" type="String" uniqueMembers="false" levelType="Regular" hideMemberIf="Never">
+      </Level>
+    </Hierarchy>
+  </Dimension>
+  <Cube name="Economy" visible="true" cache="true" enabled="true">
+    <Table name="FACT_ECONOMY">
+    </Table>
+    <DimensionUsage source="Country" name="Country" visible="true" foreignKey="country_key" highCardinality="false">
+    </DimensionUsage>
+    <DimensionUsage source="Time" name="Time" visible="true" foreignKey="time_key" highCardinality="false">
+    </DimensionUsage>
+    <Measure name="Gdp Per Capita" column="gdp_per_capita" datatype="Numeric" aggregator="avg" visible="true">
+    </Measure>
+    <Measure name="Gdp" column="gdp" datatype="Numeric" aggregator="sum" visible="true">
+    </Measure>
+    <Measure name="Gdp Growth Pct" column="gdp_growth_pct" datatype="Numeric" aggregator="avg" visible="true">
+    </Measure>
+    <Measure name="Exports Pct Gdp" column="exports_pct_gdp" datatype="Numeric" aggregator="avg" visible="true">
+    </Measure>
+    <Measure name="Imports Pct Gdp" column="imports_pct_gdp" datatype="Numeric" aggregator="avg" visible="true">
+    </Measure>
+  </Cube>
+  <Cube name="Society" visible="true" cache="true" enabled="true">
+    <Table name="FACT_SOCIETY">
+    </Table>
+    <DimensionUsage source="Country" name="Country" visible="true" foreignKey="country_key" highCardinality="false">
+    </DimensionUsage>
+    <DimensionUsage source="Time" name="Time" visible="true" foreignKey="time_key" highCardinality="false">
+    </DimensionUsage>
+    <Measure name="Population" column="population" datatype="Numeric" aggregator="sum" visible="true">
+    </Measure>
+    <Measure name="Gni Per Capita" column="gni_per_capita" datatype="Numeric" aggregator="avg" visible="true">
+    </Measure>
+    <Measure name="Life Expectancy" column="life_expectancy" datatype="Numeric" aggregator="avg" visible="true">
+    </Measure>
+    <Measure name="Urban Pop Pct" column="urban_pop_pct" datatype="Numeric" aggregator="avg" visible="true">
+    </Measure>
+  </Cube>
+  <Cube name="Sector" visible="true" cache="true" enabled="true">
+    <Table name="FACT_SECTOR">
+    </Table>
+    <DimensionUsage source="Country" name="Country" visible="true" foreignKey="country_key" highCardinality="false">
+    </DimensionUsage>
+    <DimensionUsage source="Time" name="Time" visible="true" foreignKey="time_key" highCardinality="false">
+    </DimensionUsage>
+    <DimensionUsage source="Sector" name="Sector" visible="true" foreignKey="sector_key" highCardinality="false">
+    </DimensionUsage>
+    <Measure name="Value Added Pct Gdp" column="value_added_pct_gdp" datatype="Numeric" aggregator="avg" visible="true">
+    </Measure>
+    <Measure name="Value Added Usd" column="value_added_usd" datatype="Numeric" aggregator="sum" visible="true">
+    </Measure>
+    <Measure name="Employment Pct" column="employment_pct" datatype="Numeric" aggregator="avg" visible="true">
+    </Measure>
+  </Cube>
+</Schema>

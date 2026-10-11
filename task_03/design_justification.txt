@@ -1,4 +1,4 @@
-Data Warehouse Design Justification
+# Data Warehouse Design Justification
 
 The DIM_COUNTRY, DIM_TIME, and DIM_SECTOR dimensions use integer surrogate
 keys (country_key, time_key, and sector_key) that are independent of source
@@ -29,7 +29,7 @@ at the country-year level are not associated with a sector in this model.
 Connecting those fact tables to DIM_SECTOR would add no information and could
 imply a breakdown that does not exist.
 
-Historical Events Integration
+## Historical Events Integration
 
 The chosen approach is a reference/bridge table, EVENTS, connected to
 DIM_COUNTRY and DIM_TIME through country_key and time_key. Each row represents

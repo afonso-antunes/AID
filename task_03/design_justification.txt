@@ -1,21 +1,47 @@
-1. Decisões de desenho
+Data Warehouse Design Justification
 
-Porquê três fact tables separadas e não uma só?
+The DIM_COUNTRY, DIM_TIME, and DIM_SECTOR dimensions use integer surrogate
+keys (country_key, time_key, and sector_key) that are independent of source
+codes and descriptions. Natural keys are retained as identifying attributes
+where applicable; for example, iso3_code identifies a country and year
+identifies a year.
 
-Cada uma tem uma granularidade e assuntos diferentes:
-FACT_ECONOMY - uma linha por país+ano, mede indicadores macroeconómicos (PIB)
-FACT_SOCIETY - uma linha por país+ano, mede a população (GNI per capita, esperança de vida, urbanização)
-FACT_SECTOR - uma linha por país+ano+setor, mede a estrutura económica por setor
+The three fact tables represent different business processes and grains:
 
-Juntar tudo numa só tabela resultaria em muitas colunas vazias (ex: FACT_ECONOMY não tem noção de "setor",
-FACT_SECTOR precisa de uma dimensão extra que as outras duas não precisam) e iria contra a granularidade por processo que as FACT devem ser construidas
+- FACT_ECONOMY: one row per country and year. It stores economic indicators
+  such as GDP, GDP per capita, and international trade.
+- FACT_SOCIETY: one row per country and year. It stores social and demographic
+  indicators such as population, GNI per capita, life expectancy, and
+  urbanization.
+- FACT_SECTOR: one row per country, year, and sector. It stores measures of
+  economic structure and employment by sector.
 
-Porque é que DIM_SECTOR só se liga à FACT_SECTOR?
+FACT_ECONOMY and FACT_SOCIETY share a country-year grain, but they describe
+different subject areas and contain different sets of measures. FACT_SECTOR
+has a more detailed country-year-sector grain. Keeping the tables separate
+avoids mixing processes with different grains, duplicating measures when
+joining rows by sector, and creating columns that have no meaning for some
+processes. The UNIQUE constraints enforce the intended grains.
 
-Porque só a tabela FACT_SECTOR tem a noção de "setor" (agricultura, indústria, manufatura, serviços).
-PIB per capita ou esperança de vida não têm "setor", por isso não faz sentido ligar DIM_SECTOR a FACT_ECONOMY ou FACT_SOCIETY,
-ficaria sempre a apontar para um valor tipo NULL, o que é desperdício de modelação.
+DIM_SECTOR is connected only to FACT_SECTOR because this is the only fact table
+whose measures are broken down by sector. GDP, population, and life expectancy
+at the country-year level are not associated with a sector in this model.
+Connecting those fact tables to DIM_SECTOR would add no information and could
+imply a breakdown that does not exist.
 
-Integração dos eventos qual escolher?
-Opção escolhida: Bridge Table, pois liga-se às keys das dimensões (DIM_TIME, DIM_COUNTRY) sem joins extra por year
-Evita a complexidade desnecessária da criação da DIM_EVENT (que trataria eventos como uma dimensão de medida, enquanto que na verdade são só ligações, sem medida própria)
+Historical Events Integration
+
+The chosen approach is a reference/bridge table, EVENTS, connected to
+DIM_COUNTRY and DIM_TIME through country_key and time_key. Each row represents
+an event and stores its description, category, and qualitative economic
+impact. This approach allows multiple events to be associated with the same
+country and year without assigning quantitative measures to events or changing
+the grain of the fact tables. event_key is a surrogate key for the EVENTS
+table; country_key and time_key reference the surrogate keys in the
+dimensions. EVENTS is not a fourth fact table of economic indicators, and no
+DIM_EVENT was created because events are used as descriptive context rather
+than as an analytical dimension for the measures in this design.
+
+The accompanying ER diagram represents this model and shows the three fact
+tables, the three dimensions, the EVENTS table, and their foreign-key
+relationships.

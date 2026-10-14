@@ -1,0 +1,179 @@
+Parte B - Data Quality Discussion
+
+Country-name and coverage differences between Maddison and WDI
+
+Although both sources use ISO3 country codes, they do not share identical country coverage. The European Union aggregate (EUU) appears in WDI and in the historical events dataset, but has no corresponding entry in Maddison. Maddison only covers individual nation-states. Country names between the two sources were consistent after normalization, but required explicit verification rather than being assumed.
+
+
+(query que valida isto:
+-- EUU existe em WDI?
+SELECT DISTINCT country_iso3, country_name FROM staging.staging_wdi WHERE country_iso3 = 'EUU';
+
+-- EUU existe em Events?
+SELECT DISTINCT country_iso3, country_name FROM staging.staging_historical_events WHERE country_iso3 = 'EUU';
+
+-- EUU existe em Maddison? devolve 0 linhas
+SELECT DISTINCT country_iso3, country_name FROM staging.staging_maddison WHERE country_iso3 = 'EUU';
+
+SELECT w.country_iso3, w.country_name AS name_wdi, m.country_name AS name_maddison
+FROM (SELECT DISTINCT country_iso3, country_name FROM staging.staging_wdi) w
+LEFT JOIN (SELECT DISTINCT country_iso3, country_name FROM staging.staging_maddison) m
+  ON w.country_iso3 = m.country_iso3
+WHERE m.country_iso3 IS NULL;
+)
+
+Temporal gaps
+
+
+Maddison spans 1900-2022 for gdp, gdppc and pop, while WDI's coverage varies sharply by indicator: almost all core WDI series (GDP growth, trade, sector value-added at the global level, life expectancy, urbanization) start in 
+1960-1962, employment-by-sector series only from 1991, and specifically 
+for Portugal sector value-added data only from 1995, consistent with the 
+project brief. This creates a clear "staircase" of data availability: a 
+decade-by-decade count of populated measures for Portugal shows FACT_ECONOMY's 
+gdp fully populated from 1900 onward, while FACT_SOCIETY's gni_per_capita and 
+life_expectancy remain entirely null until the 1960s decade (0 of 10 years 
+populated per decade before 1960, rising to 10 of 10 from 1960 onward). This 
+pattern, confirmed directly in our Task 8 reporting queries and initially 
+surfacing as unexplained blank cells was handled with COALESCE(..., 'NA') 
+as a practical workaround when building country comparisons back to 1900.
+
+
+(queries que validam isto:
+-- 1900-2022
+SELECT MIN(year) AS min_year, MAX(year) AS max_year 
+FROM staging.staging_maddison;
+
+SELECT indicator_code, indicator_name, MIN(year) AS min_year, MAX(year) AS max_year
+FROM staging.staging_wdi
+GROUP BY indicator_code, indicator_name
+ORDER BY min_year;
+
+SELECT dt.Decade,
+       COUNT(fe.gdp) AS gdp_filled,
+       COUNT(fs.gni_per_capita) AS gni_filled,
+       COUNT(fs.life_expectancy) AS life_exp_filled
+FROM portugal_dw.FACT_ECONOMY fe
+JOIN portugal_dw.DIM_TIME dt ON fe.time_key  = dt.time_key
+JOIN portugal_dw.DIM_COUNTRY dc ON fe.country_key  = dc.country_key
+LEFT JOIN portugal_dw.FACT_SOCIETY fs ON fe.country_key = fs.country_key AND fe.time_key = fs.time_key
+WHERE dc.iso3_code = 'PRT'
+GROUP BY dt.Decade
+ORDER BY dt.Decade;
+
+SELECT indicator_code, MIN(year) AS min_year
+FROM staging.staging_wdi
+WHERE country_iso3 = 'PRT' 
+  AND indicator_code IN ('NV.AGR.TOTL.ZS','NV.IND.TOTL.ZS','NV.IND.MANF.ZS','NV.SRV.TOTL.ZS')
+GROUP BY indicator_code;
+)
+
+
+Missing values for specific countries and years
+
+Beyond the systematic source-level temporal gaps, individual countries show 
+additional, country-specific irregularities in Maddison coverage. Poland and 
+Hungary nominally span the full 1900-2022 range but are missing 34 and 23 
+years respectively within that span, gaps rather than a late start, likely 
+reflecting discontinuities in historical territorial/statistical records 
+across regime changes. The three Baltic states (Estonia, Latvia, Lithuania) 
+start only in 1973 and are each missing 6 further years within that shorter 
+range, consistent with their status as Soviet republics prior to 1991 and 
+limited retrospective data reconstruction. Czechia starts later aswell (1970) 
+but has no internal gaps, while Ireland, despite relatively early coverage 
+(from 1913), is still missing 7 years. By contrast, the core Western European 
+comparison countries (Belgium, France, Germany, Spain, Italy, Greece, Portugal) 
+have fully complete series across the entire 1900-2022 range. This irregularity 
+was not just a staging-table curiosity: it propagated downstream, causing 
+Pentaho Report Designer to render misaligned or malformed chart category axes 
+when country series had uneven numbers of data points a concrete illustration 
+of how upstream data-quality issues resurface at the reporting layer, not only 
+during ETL.
+
+
+(queries que validam:
+
+SELECT country_name, MIN(year) AS min_year, MAX(year) AS max_year, COUNT(*) AS n_years
+FROM staging.staging_maddison
+WHERE indicator_code = 'gdppc'
+GROUP BY country_name
+ORDER BY n_years asc;
+
+SELECT country_name, 
+       MIN(year) AS min_year, 
+       MAX(year) AS max_year, 
+       (MAX(year) - MIN(year) + 1) AS expected_years,
+       COUNT(*) AS actual_years,
+       (MAX(year) - MIN(year) + 1) - COUNT(*) AS gap_years
+FROM staging.staging_maddison
+WHERE indicator_code = 'gdppc'
+GROUP BY country_name
+ORDER BY gap_years DESC;
+)
+
+
+Empty Maddison measures for the EU aggregate
+
+Since EUU has no Maddison entry, FACT_ECONOMY and FACT_SOCIETY rows for the EU aggregate have null gdp, gdp_per_capita and population, even though WDI-sourced measures (GNI, life expectancy) are populated. This asymmetry meant the EU benchmark could only be used in WDI-only analyses, not in long-run Maddison-based growth comparisons.
+
+(query de prova:
+
+SELECT dt.Year, fe.gdp, fe.gdp_per_capita, fs.population, fs.gni_per_capita, fs.life_expectancy
+FROM portugal_dw.DIM_COUNTRY dc
+JOIN portugal_dw.FACT_ECONOMY fe ON dc.country_key  = fe.country_key
+LEFT JOIN portugal_dw.FACT_SOCIETY fs ON fe.country_key = fs.country_key AND fe.time_key = fs.time_key
+JOIN portugal_dw.DIM_TIME dt ON fe.time_key  = dt.time_key
+WHERE dc.iso3_code = 'EUU'
+ORDER BY dt.Year
+LIMIT 20;
+)
+
+
+
+ETL bottlenecks encountered
+
+Several ETL bottlenecks arose during the project. First, a design decision 
+on how to load the dimension and fact tables: an Insert/Update (delta) 
+approach was chosen over a Table output with a full truncate, since the latter 
+would require a separate cleanup job to clear child tables before parents 
+(due to foreign-key constraints) and would discard the ability to re-run 
+individual pipelines incrementally. Second, FACT_SECTOR required manually building a sector 
+mapping (via a Value mapper translating WDI indicator codes to sector names 
+and broad-sector groupings), since no such mapping exists in the source data. 
+Third, connecting Docker-hosted tools (Saiku) to the host MySQL instance 
+required troubleshooting both network resolution (host.docker.internal not 
+resolving on native Linux Docker, resolved using the docker0 bridge IP) and 
+authentication (the mysql@localhost user needed a mysql@'%' counterpart with 
+GRANT OPTION to accept connections from the container's IP). Forth, a packaging 
+bug in the Saiku Docker image (diogoff/saiku:3.90) caused all cube metadata 
+requests to fail with a ClassNotFoundException, traced to corrupted/duplicated 
+Mondrian classes inside a bundled JAR, resolved by repackaging the JAR without 
+the conflicting classes. Finally, though arguably a reporting rather than ETL 
+issue, assembling continuous, evenly-spaced time series for Pentaho Report 
+Designer charts required explicitly filtering or aggregating queries (e.g., 
+by decade) to avoid malformed category axes caused by countries with uneven 
+data coverage.
+
+Interesting patterns discovered
+
+The single most striking pattern is the reversal of Portugal's relative 
+position versus Central/Eastern Europe: in 1990, Portugal's GDP per capita 
+was 2-3x higher than Poland's, Hungary's or the Baltic states' (up to 338% 
+of Romania's). By 2020, however, Czechia, Poland, Lithuania and Estonia had 
+all overtaken Portugal, and Romania had essentially closed the gap 
+a complete comeback within 30 years, driven by rapid post-communist transition 
+growth and 2004/2007 EU accession, against Portugal's own stagnation since 2000.
+
+A second pattern is the scale of Portugal's primary-sector decline: Agriculture's 
+share of GDP fell by more than half (4.8% to 2.1%, 1995-2020 a 56% relative 
+decline), far steeper than the decline in Industry (24.8% to 19.4%) or 
+Manufacturing specifically (15.9% to 12.1%), which fell at a broadly 
+similar pace to Industry as a whole. Services, meanwhile, grew from 58.5% to 
+65.6% of GDP, confirming a classic tertiarization pattern rather than a 
+manufacturing-specific deindustrialization story.
+
+A third pattern is Portugal's comparatively volatile but roughly stable 
+long-run position relative to Greece: the Portugal/Greece GDP per capita 
+ratio averages 94.1% across the century, with a standard deviation of 15.1 
+percentage points and no clear decade trend in either direction. This suggests Portugal and Greece faced 
+broadly comparable structural problems throughout the period, rather than 
+one consistently catching up to or diverging from the other.
